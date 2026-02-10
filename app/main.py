@@ -1,7 +1,7 @@
 from pprint import pprint
 from fastapi import FastAPI, Request
 
-from app.services.helpers import find_contact_by_phone, clean_phone
+from app.services.helpers import delete_contact, find_contacts_by_phone, clean_phone, find_duplicate
 
 
 app = FastAPI(title='amoCRM')
@@ -26,7 +26,7 @@ async def test_request(request: Request):
     print(phone)
 
     phone = clean_phone(phone)
-    contact = await find_contact_by_phone(phone, 'kostantinef')
+    contact = await find_contacts_by_phone(phone, 'kostantinef')
 
     if len(contact) > 1:
         lst = []
@@ -44,14 +44,16 @@ async def test_request(request: Request):
 
 @app.get('/contacts')
 async def all_contants_endpoint():
-    result = await find_contact_by_phone('71231231212', 'kostantinef')
-    lst = []
-    for i in result:
-        lst.append(
-            {'id': i.get('id'), 'created_at': i.get('created_at')}
-        )
-        
-    original = min(lst, key=lambda x: x['id'])
+    result = await find_contacts_by_phone('71231231212', 'kostantinef')
+    original = await find_duplicate(result)
+
+    return {
+        'all_contacts': result,
+        'original': original
+    }
 
 
-    return result
+@app.delete('/contacts')
+async def delete_contact_endpoint():
+    deleted = await delete_contact(subdomain='kostantinef', contact_id='81675848')
+    return deleted
