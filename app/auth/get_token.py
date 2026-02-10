@@ -38,4 +38,51 @@ async def get_auth_token():
             print('Ошибка', response.status_code)
             print(response.text)
 
-asyncio.run(get_auth_token())
+# asyncio.run(get_auth_token())
+
+
+# Заного получаю acces_tokken
+async def resresh_amo_token(refresh_token):
+    url = f'https://{SUBDOMAIN}.amocrm.ru/oauth2/access_token'
+    params = {
+        'client_id': CLIENT_ID,
+        'client_secret': CLIENT_SECRET,
+        'grant_type': 'refresh_token',
+        # 'subdomain': SUBDOMAIN,
+        'redirect_uri': REDIRECT_URL,
+        'refresh_token': refresh_token,
+    }
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, json=params)
+
+        if response.status_code == 200:
+            token = response.json()
+            print(token)
+            with open('token.json', 'w') as f:
+                json.dump(token, f)
+                print('ok')
+            return token
+        
+        print(response.status_code, response.text)
+        return response.status_code, response.text
+    
+# asyncio.run(resresh_amo_token('def50200b41c3881b94932531df744da33feb5af5d9e69240d264edc54683eb2ffffc46422377dd16db0dfdd0500e3918ab8ddd80af6dc19a00514e39abee0d3d3a5f78972deb86351e34af4f7ed7f5104997e19a63d4e51ff7f39cd777e1e7ee54407a38c4a060e04bac41f115f217a368cd14c35a8c7e8962f726994d9c6999e1b9d6bbcf21da1a4586642969a94f9c8727271013e5c68a8d0e97c8de3cf6884774efde95b01c25ba8aa72f88b4f71c6120c91066c9cb4a74a4f6e617ed514e281f07986d647c0a9e4ec923f3449354923714f3b6da750c0d769a97c5a020f8193af6faf4cd7ab4d0c5a37f07f4b618f7c178e2be94783e7d847a76a4b165fd51c62d05d797f084beaab04983e8bd5c4e7d8a7fdd635de1a9cb13164f0a38c14576b38d37665bad6ab31499b380a9c312a3720a7077e85f75010a366d04bbc2e915de60a24bdb6086ed7ff1e6a901ca9a287a2615c4367e338bea5275bbe21c395546797b37335129162842cb2f18c91c6cd47a04fa215479d93ec9914d5d8d348f8ece817d20b3939f47066553d9ddfae7837c8253e90917b98076e556097341f2a27f9321e579c0e2aa66ac33829fbbed3200a6f142194bdb98d222beef0dd238e77d067ecd6f5528c374a7e59177d6dac5220623c02626c30e4b43efd36a8f6ca58b55554bdd24511976666'))
+
+
+async def check_token():
+    subdomain = 'kostantinef'
+    token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6IjlmZjM3NTM2Zjg1NmNlYmFjN2ZjYmZiYjdkZWJhOGU4OTAxNTEyNmYwMDhjZDIzMzk4NjBlZDM0NWJiYjkyNjJkMTRjY2RlOWU0MjAxMTc5In0.eyJhdWQiOiIxYTMwYTA4ZS04MzhjLTRiYWItYTczYy0wMTkyNTIxOTI3YWEiLCJqdGkiOiI5ZmYzNzUzNmY4NTZjZWJhYzdmY2JmYmI3ZGViYThlODkwMTUxMjZmMDA4Y2QyMzM5ODYwZWQzNDViYmI5MjYyZDE0Y2NkZTllNDIwMTE3OSIsImlhdCI6MTc3MDc1NDQ0MiwibmJmIjoxNzcwNzU0NDQyLCJleHAiOjE3NzA4NDA4NDIsInN1YiI6IjEzNDg2MDY2IiwiZ3JhbnRfdHlwZSI6IiIsImFjY291bnRfaWQiOjMyODk0NDkwLCJiYXNlX2RvbWFpbiI6ImFtb2NybS5ydSIsInZlcnNpb24iOjIsInNjb3BlcyI6WyJwdXNoX25vdGlmaWNhdGlvbnMiLCJmaWxlcyIsImNybSIsImZpbGVzX2RlbGV0ZSIsIm5vdGlmaWNhdGlvbnMiXSwiaGFzaF91dWlkIjoiNzU2ODA3NzEtYWJlMy00YTI1LTg1ODctMjY0NTg1OWFmMmFlIiwiYXBpX2RvbWFpbiI6ImFwaS1iLmFtb2NybS5ydSJ9.HVN4OAoeA12OrN0Dr6gnrqKciODFhmAN7Svm0uDKGaePMvNMKlePWCPZyMH6X2P1RHgmJjktj0kBhJa2oxp3c9a3PlpXCZw_1RdAAHQjE_HJAAvj_D7alR_OuUtQYWA94m2m_96PXXcbob0IAANHJHuYW5vI3m1YMjAz6or344byk11QPZm2VI98ONYjOQ-8hb8ayJFDe03xyp_yhxhwcp2NlwuA_K1qsnfw9l1m3GHcZbrYA-MOUtqi_IeTSSjrH3RYoV6vsbLZP4eVekAbM2nsswU-gKozeouALGXdJGmnx73LAuor6fmc_ixws9y8sQ4wrnHX4Ur3E14kZ6oG3A' 
+    
+    url = f'https://{subdomain}.amocrm.ru/api/v4/account' # Базовый запрос информации об аккаунте
+    headers = {
+        'Authorization': f'Bearer {token.strip()}',
+        'User-Agent': 'amoCRM-oAuth-client/1.0'
+    }
+
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url, headers=headers)
+        print(f'Статус: {response.status_code}')
+        print(f'Ответ: {response.text}')
+
+asyncio.run(check_token())
