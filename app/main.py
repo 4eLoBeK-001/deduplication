@@ -1,7 +1,7 @@
 from pprint import pprint
 from fastapi import FastAPI, Request
 
-from app.services.helpers import delete_contact, find_contacts_by_phone, clean_phone, find_duplicate, update_original_contact
+from app.services.helpers import delete_contact, find_contact_by_id, find_contacts_by_phone, clean_phone, find_duplicate, update_original_contact
 
 
 app = FastAPI(title='amoCRM')
@@ -40,7 +40,7 @@ async def test_request(request: Request):
 
 @app.get('/contacts')
 async def all_contants_endpoint():
-    result = await find_contacts_by_phone('71231231212', 'kostantinef')
+    result = await find_contact_by_id('81700552', 'kostantinef')
     # original, duplucate = await find_duplicate(result)
 
     return {
@@ -52,13 +52,13 @@ async def all_contants_endpoint():
 
 @app.delete('/contacts')
 async def delete_contact_endpoint():
-    deleted = await delete_contact(subdomain='kostantinef', contact_id='81675848')
+    deleted = await delete_contact(subdomain='kostantinef', contact_id='81700552')
     return deleted
 
 
 @app.get('/GETcontacts')
 async def allL_contants_endpoint():
-    original_contact = await update_original_contact()
+    original_contact = await update_original_contact(subdomain='kostantinef')
 
     return   original_contact
     
