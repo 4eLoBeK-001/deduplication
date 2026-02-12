@@ -173,3 +173,30 @@ async def get_contact_notes(contact_id: int, subdomain: str):
         if response.status_code == 200:
             return response.json().get('_embedded', {}).get('notes', [])
         return []
+
+
+# Переносит примечания из старого контакта в новый. Для этого надо
+# передать: список примечаний старого контакта и айди контакта в который надо перенести
+async def transfer_notes(notes_list, original_contact_id, subdomain):
+    if not notes_list:
+        return
+        
+    url = f'https://{subdomain}.amocrm.ru/api/v4/contacts/{original_contact_id}/notes'
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+        'Content-Type': 'application/json'
+    }
+    
+    payload = []
+    for note in notes_list:
+        payload.append({
+            'note_type': note.get('note_type', 'common'),
+            'params': note.get('params', {
+                'text': note.get('params', {}).get('text')
+            })
+        })
+
+    if payload:
+        async with httpx.AsyncClient() as client:
+            await client.post(url, headers=headers, json=payload)
+            return True
