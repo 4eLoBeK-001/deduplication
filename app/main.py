@@ -2,7 +2,7 @@ from pprint import pprint
 from fastapi import FastAPI, Request
 import httpx
 
-from app.services.helpers import delete_contact, find_contact_by_id, find_contacts_by_phone, clean_phone, find_duplicate, link_lead_to_contact, update_original_contact
+from app.services.helpers import delete_contact, find_contact_by_id, find_contacts_by_phone, clean_phone, find_duplicate, get_contact_notes, link_lead_to_contact, update_original_contact
 
 
 app = FastAPI(title='amoCRM')
@@ -68,3 +68,12 @@ async def allL_contants_endpoint():
 async def link_lead_endpoint(lead_id: int=60446104, new_contact_id: int=81676058):
     success = await link_lead_to_contact(lead_id, new_contact_id, 'kostantinef')
     return {'status': 'Linked' if success else 'Failed'}
+
+
+
+@app.get('/notes')
+async def contact_notes(contact_id: int=81676058):
+    success = await get_contact_notes(contact_id, 'kostantinef')
+    return {'status': success if success else 'Failed'}
+
+

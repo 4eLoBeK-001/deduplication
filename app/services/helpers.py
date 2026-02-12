@@ -161,3 +161,15 @@ async def link_lead_to_contact(lead_id: int=60446104, contact_id: int=81676058, 
         if response.status_code in (200, 201, 204):
             return True
         return False
+
+
+# Получаем все примечания или заметки контакта. Нужно: айди контакта
+async def get_contact_notes(contact_id: int, subdomain: str):
+    url = f'https://{subdomain}.amocrm.ru/api/v4/contacts/{contact_id}/notes'
+    headers = {'Authorization': f'Bearer {access_token}'}
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url, headers=headers)
+        if response.status_code == 200:
+            return response.json().get('_embedded', {}).get('notes', [])
+        return []
