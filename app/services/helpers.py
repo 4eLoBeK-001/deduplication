@@ -30,7 +30,10 @@ async def find_contacts_by_phone(phone: str, subdomain: str):
 async def find_contact_by_id(contact_id: str, subdomain: str):
     url = f'https://{subdomain}.amocrm.ru/api/v4/contacts'
     headers = {'Authorization': f'Bearer {access_token}'}
-    params = {'query': f'{contact_id}'}
+    params = {
+        'query': f'{contact_id}',
+        'with': 'leads',
+    }
 
     async with httpx.AsyncClient() as client:
         response = await client.get(url, headers=headers, params=params)
@@ -132,3 +135,29 @@ async def update_original_contact(subdomain: str):
 # asyncio.run(all_contacts('kostantinef')) 
 # 4545454545
 
+
+# Для того чтобы привязать сделку к контакту нужно: айди сделки и айди контакта
+async def link_lead_to_contact(lead_id: int=60446104, contact_id: int=81676058, subdomain: str='kostantinef'):
+    url = f'https://{subdomain}.amocrm.ru/api/v4/leads/{lead_id}/link'
+    
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+        'Content-Type': 'application/json'
+    }
+
+    payload = [
+        {
+            'to_entity_id': contact_id,
+            'to_entity_type': 'contacts',
+            'metadata': {
+                'is_main': True
+            }
+        }
+    ]
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, headers=headers, json=payload)
+        
+        if response.status_code in (200, 201, 204):
+            return True
+        return False
