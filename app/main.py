@@ -2,7 +2,11 @@ from pprint import pprint
 from fastapi import FastAPI, Request
 import httpx
 
-from app.services.helpers import delete_contact, extract_phone_final, find_contact_by_id, find_contacts_by_phone, clean_phone, find_duplicate, get_contact_notes, link_lead_to_contact, transfer_notes, update_original_contact
+from app.services.helpers import (
+    extract_phone_final, find_contacts_by_phone, clean_phone, 
+    find_duplicate, get_contact_notes, link_lead_to_contact, 
+    transfer_notes, update_original_contact
+)
 
 
 app = FastAPI(title='amoCRM')
@@ -38,52 +42,6 @@ async def test_request(request: Request):
         await link_lead_to_contact(lead_id, original.get('id'))
         notes = await get_contact_notes(duplicate.get('id'), 'kostantinef')
         await transfer_notes(notes, original.get('id'), 'kostantinef')
-        print({'Успешно': 'Супер!'})
         return {'Успешно': 'Супер!'}
     
     return {"status": "ok"}
-
-
-@app.get('/contacts')
-async def all_contants_endpoint():
-    result = await find_contact_by_id('81830990', 'kostantinef')
-    if result[0].get('_embedded').get('leads'):
-        is_leads = result[0].get('_embedded').get('leads')[0].get('id')
-
-    return {
-        'all_contacts': result,
-    }
-
-
-@app.delete('/contacts')
-async def delete_contact_endpoint():
-    deleted = await delete_contact(subdomain='kostantinef', contact_id='81700552')
-    return deleted
-
-
-@app.get('/GETcontacts')
-async def allL_contants_endpoint():
-    original_contact = await update_original_contact(subdomain='kostantinef')
-
-    return   original_contact
-    
-
-@app.get('/link-lead')
-async def link_lead_endpoint(lead_id: int=60446104, new_contact_id: int=81676058):
-    success = await link_lead_to_contact(lead_id, new_contact_id, 'kostantinef')
-    return {'status': 'Linked' if success else 'Failed'}
-
-
-
-@app.get('/notes')
-async def contact_notes(contact_id: int=81676058):
-    success = await get_contact_notes(contact_id, 'kostantinef')
-    return {'status': success if success else 'Failed'}
-
-
-@app.get('/notessss')
-async def transfer_notes_endpoint(contact_id: int=81676058):
-    note = await get_contact_notes(81700552, 'kostantinef')
-
-    success = await transfer_notes(note, contact_id, 'kostantinef')
-    return {'status': success if success else 'Failed'}
