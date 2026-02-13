@@ -5,9 +5,11 @@ import httpx
 
 access_token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6ImJmMmE4MjEzMDVkZGJkMzc2NmRiYmFiNTQwNzRiMWRmY2NkNDFiN2FlZmRmMmVmZWJjNjk2NzNhNzNkOTY3ZjM1NTE2MTBmMDI2MjI0YzVkIn0.eyJhdWQiOiIxYTMwYTA4ZS04MzhjLTRiYWItYTczYy0wMTkyNTIxOTI3YWEiLCJqdGkiOiJiZjJhODIxMzA1ZGRiZDM3NjZkYmJhYjU0MDc0YjFkZmNjZDQxYjdhZWZkZjJlZmViYzY5NjczYTczZDk2N2YzNTUxNjEwZjAyNjIyNGM1ZCIsImlhdCI6MTc3MDkwMTExNiwibmJmIjoxNzcwOTAxMTE2LCJleHAiOjE3NzA5ODc1MTYsInN1YiI6IjEzNDg2MDY2IiwiZ3JhbnRfdHlwZSI6IiIsImFjY291bnRfaWQiOjMyODk0NDkwLCJiYXNlX2RvbWFpbiI6ImFtb2NybS5ydSIsInZlcnNpb24iOjIsInNjb3BlcyI6WyJwdXNoX25vdGlmaWNhdGlvbnMiLCJmaWxlcyIsImNybSIsImZpbGVzX2RlbGV0ZSIsIm5vdGlmaWNhdGlvbnMiXSwiaGFzaF91dWlkIjoiYTczNWNiMzAtM2I2My00MWUxLTgyZTMtNzM4YTg2NzZmNWMxIiwiYXBpX2RvbWFpbiI6ImFwaS1iLmFtb2NybS5ydSJ9.DMtHs2awhf6LEuM3X4qigcdvuBsFe-nFlDaFQdjLD_6fgYnMbJHExCpRBFOowR4ceQxKMGtfr6mEyGy9zxLxDnKi0yhMg_HrHo7o7KVpJ-QgIV1NnndQIZJRAmnd_9wJWJVfuL-NP0cOvaXTfKF-NOBDKFBidpx3TqCHThfOwU3FFH9YoH_B2IjaAog4oyQ5VRCCP2Qfn7UuZQRLNDATv4t7YL92mjSdzo-XRBD-9r6dMYSn8UK0sgcVjz92nc2F_YyhETsDW326B7FvaH5wB_a6h1TmfK8Sgt7EGYg2hM0XLyiKnoEv2h85WHpmWRcw3iC_IqjYhUU8Lgyb6t05VA'
 
+# Оставляем только цифры
 def clean_phone(phone: str) -> str:
     return re.sub(r'\D', '', phone)
 
+# Поиск контакта по телефону
 async def find_contacts_by_phone(phone: str, subdomain: str):
     url = f'https://{subdomain}.amocrm.ru/api/v4/contacts'
     headers = {'Authorization': f'Bearer {access_token}'}
@@ -26,7 +28,7 @@ async def find_contacts_by_phone(phone: str, subdomain: str):
             return contacts
         return response.status_code, response.text
 
-
+# Поиск контакта по его айди
 async def find_contact_by_id(contact_id: str, subdomain: str):
     url = f'https://{subdomain}.amocrm.ru/api/v4/contacts'
     headers = {'Authorization': f'Bearer {access_token}'}
@@ -88,8 +90,8 @@ async def delete_contact(subdomain: str, contact_id: str):
             return 'Дубль обработан'
         return f'Ошибка: {response.status_code} - {response.text}'
 
-
-async def update_original_contact(original, duplicate, subdomain: str):
+# Обновляем поля
+async def update_original_contact(original: dict[str, str], duplicate: dict[str, str], subdomain: str):
 
     original_contact = await find_contact_by_id(original['id'], subdomain)
     duplicate_contact = await find_contact_by_id(duplicate['id'], subdomain)

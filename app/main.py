@@ -14,7 +14,7 @@ from app.services.helpers import (
 
 load_dotenv()
 
-SUBDOMAIN = os.getenv("AMOCRM_SUBDOMAIN")
+SUBDOMAIN = os.getenv('AMOCRM_SUBDOMAIN')
 
 
 app = FastAPI(title='amoCRM')
@@ -22,7 +22,7 @@ app = FastAPI(title='amoCRM')
 
 @app.get('/')
 async def test(request: Request):
-    return {"status": "ok"}
+    return {'status': 'ok'}
 
 
 @app.post('/webhook')
@@ -49,11 +49,18 @@ async def test_request(request: Request):
     if len(found_contacts) > 1:
         original, duplicate = await find_duplicate(found_contacts)
 
+        # После того как поняли что есть оригинал, ждём 2 секунды
         await asyncio.sleep(2)
+
+        # Обновляем поля у оригинала
         await update_original_contact(original, duplicate, SUBDOMAIN)
+        # Привязываем сделки из дубликата к оригиналу
         await link_lead_to_contact(lead_id, original.get('id'))
+
+        # Переносим примечания
         notes = await get_contact_notes(duplicate.get('id'), SUBDOMAIN)
         await transfer_notes(notes, original.get('id'), SUBDOMAIN)
-        return {'Успешно': 'Супер!'}
-    
-    return {"status": "ok"}
+
+        return {'status': 'ok'}
+
+    return {'status': 'ok'}
