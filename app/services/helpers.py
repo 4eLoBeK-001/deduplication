@@ -15,7 +15,10 @@ async def find_contacts_by_phone(phone: str, subdomain: str):
     url = f'https://{subdomain}.amocrm.ru/api/v4/contacts'
     headers = {'Authorization': f'Bearer {access_token}'}
     phone = clean_phone(phone)
-    params = {'query': f'{phone}'}
+    params = {
+        'query': f'{phone}',
+        'with': 'leads',
+    }
 
     async with httpx.AsyncClient() as client:
         response = await client.get(url, headers=headers, params=params)
@@ -45,6 +48,8 @@ async def find_contact_by_id(contact_id: str, subdomain: str):
         return []
 
 
+# Передаём список контактов. 
+# Возвращает оригинал и самый новый контакт
 async def find_duplicate(contacts: list):
     if not contacts:
         return None
@@ -63,7 +68,8 @@ async def find_duplicate(contacts: list):
 # Стираются все custom_fields_values
 async def delete_contact(subdomain: str, contact_id: str):
     payload = {
-            "custom_fields_values": [
+            'name': '',
+            'custom_fields_values': [
             ]
         }
     url = f'https://{subdomain}.amocrm.ru/api/v4/contacts/{contact_id}'
@@ -86,15 +92,16 @@ async def delete_contact(subdomain: str, contact_id: str):
         return f'Ошибка: {response.status_code} - {response.text}'
 
 
-async def update_original_contact(subdomain: str):
-    result = await find_contacts_by_phone('71231231212', subdomain)
-    original, duplucate = await find_duplicate(result)
+async def update_original_contact(original, duplicate, subdomain: str):
 
     original_contact = await find_contact_by_id(original['id'], subdomain)
-    duplucate_contact = await find_contact_by_id(duplucate['id'], subdomain)
+    duplicate_contact = await find_contact_by_id(duplicate['id'], subdomain)
 
+    # print('------------ ПОЛЕ -------------')
+    # pprint(duplicate_contact[0])
+    # pprint(original_contact[0])
     # Существующие поля дупликата и оригинала 
-    existings_duplicate_fields = duplucate_contact[0].get('custom_fields_values')
+    existings_duplicate_fields = duplicate_contact[0].get('custom_fields_values')
     existings_original_fields = original_contact[0].get('custom_fields_values')
 
     # Названия существующих полей
@@ -127,7 +134,7 @@ async def update_original_contact(subdomain: str):
     async with httpx.AsyncClient() as client:
         response = await client.patch(url, headers=headers, json=payload)
         if response.status_code == 200:
-            await delete_contact(subdomain, str(duplucate['id']))
+            await delete_contact(subdomain, str(duplicate['id']))
             return response.json(), response.text
         return response.status_code, response.text
     
@@ -137,7 +144,10 @@ async def update_original_contact(subdomain: str):
 
 
 # Для того чтобы привязать сделку к контакту нужно: айди сделки и айди контакта
-async def link_lead_to_contact(lead_id: int=60446104, contact_id: int=81676058, subdomain: str='kostantinef'):
+async def link_lead_to_contact(lead_id: int, contact_id: int, subdomain: str='kostantinef'):
+    if lead_id == 0:
+        return
+    
     url = f'https://{subdomain}.amocrm.ru/api/v4/leads/{lead_id}/link'
     
     headers = {
@@ -163,7 +173,7 @@ async def link_lead_to_contact(lead_id: int=60446104, contact_id: int=81676058, 
         return False
 
 
-# Получаем все примечания или заметки контакта. Нужно: айди контакта
+# Получаем все примечания/заметки контакта. Нужно: айди контакта
 async def get_contact_notes(contact_id: int, subdomain: str):
     url = f'https://{subdomain}.amocrm.ru/api/v4/contacts/{contact_id}/notes'
     headers = {'Authorization': f'Bearer {access_token}'}
@@ -200,3 +210,26 @@ async def transfer_notes(notes_list, original_contact_id, subdomain):
         async with httpx.AsyncClient() as client:
             await client.post(url, headers=headers, json=payload)
             return True
+
+
+async def extract_phone_final(data):
+    phone_index = None
+    
+    # Ищет под каким номером в списке custom_fields лежит телефон
+    for key, value in data.items():
+        if '[code]' in key and value == 'PHONE':
+            phone_index = key.split('[code]')[0]
+            break
+    
+    if not phone_index:
+        print('Поле PHONE не найдено')
+        return None
+
+    # Ищет значение 'value', которое принадлежит этому индексу.
+    for key, value in data.items():
+        if phone_index in key and '[value]' in key:
+            print(f'Телефон: {value}')
+            return value
+
+    print('Индекс найден, нок телефон нет')
+    return None
