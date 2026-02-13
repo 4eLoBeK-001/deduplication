@@ -43,6 +43,7 @@ async def test_request(request: Request):
     
     # Если у контакта есть сделки
     lead_id = 0
+    pprint(found_contacts)
     if found_contacts[-1].get('_embedded').get('leads'):
         lead_id = found_contacts[-1].get('_embedded').get('leads')[0].get('id')
 
@@ -61,6 +62,8 @@ async def test_request(request: Request):
         notes = await get_contact_notes(duplicate.get('id'), SUBDOMAIN)
         await transfer_notes(notes, original.get('id'), SUBDOMAIN)
 
+        print('WITH')
         return {'status': 'ok'}
 
+    print('BEZ')
     return {'status': 'ok'}

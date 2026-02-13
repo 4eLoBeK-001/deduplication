@@ -3,19 +3,20 @@ from pprint import pprint
 import re
 import httpx
 
-access_token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6ImJmMmE4MjEzMDVkZGJkMzc2NmRiYmFiNTQwNzRiMWRmY2NkNDFiN2FlZmRmMmVmZWJjNjk2NzNhNzNkOTY3ZjM1NTE2MTBmMDI2MjI0YzVkIn0.eyJhdWQiOiIxYTMwYTA4ZS04MzhjLTRiYWItYTczYy0wMTkyNTIxOTI3YWEiLCJqdGkiOiJiZjJhODIxMzA1ZGRiZDM3NjZkYmJhYjU0MDc0YjFkZmNjZDQxYjdhZWZkZjJlZmViYzY5NjczYTczZDk2N2YzNTUxNjEwZjAyNjIyNGM1ZCIsImlhdCI6MTc3MDkwMTExNiwibmJmIjoxNzcwOTAxMTE2LCJleHAiOjE3NzA5ODc1MTYsInN1YiI6IjEzNDg2MDY2IiwiZ3JhbnRfdHlwZSI6IiIsImFjY291bnRfaWQiOjMyODk0NDkwLCJiYXNlX2RvbWFpbiI6ImFtb2NybS5ydSIsInZlcnNpb24iOjIsInNjb3BlcyI6WyJwdXNoX25vdGlmaWNhdGlvbnMiLCJmaWxlcyIsImNybSIsImZpbGVzX2RlbGV0ZSIsIm5vdGlmaWNhdGlvbnMiXSwiaGFzaF91dWlkIjoiYTczNWNiMzAtM2I2My00MWUxLTgyZTMtNzM4YTg2NzZmNWMxIiwiYXBpX2RvbWFpbiI6ImFwaS1iLmFtb2NybS5ydSJ9.DMtHs2awhf6LEuM3X4qigcdvuBsFe-nFlDaFQdjLD_6fgYnMbJHExCpRBFOowR4ceQxKMGtfr6mEyGy9zxLxDnKi0yhMg_HrHo7o7KVpJ-QgIV1NnndQIZJRAmnd_9wJWJVfuL-NP0cOvaXTfKF-NOBDKFBidpx3TqCHThfOwU3FFH9YoH_B2IjaAog4oyQ5VRCCP2Qfn7UuZQRLNDATv4t7YL92mjSdzo-XRBD-9r6dMYSn8UK0sgcVjz92nc2F_YyhETsDW326B7FvaH5wB_a6h1TmfK8Sgt7EGYg2hM0XLyiKnoEv2h85WHpmWRcw3iC_IqjYhUU8Lgyb6t05VA'
+access_token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6IjQyMzBmNjAwMTgyOGFlOGM3OGRiZDBiNzEyMDE4ODRiOGZhNDA5MTNjZmNiNzFmMWI2OTY5YmVlMzFmYmQzMWEwMGNmNjJlMTllMjJkMTY1In0.eyJhdWQiOiIxYTMwYTA4ZS04MzhjLTRiYWItYTczYy0wMTkyNTIxOTI3YWEiLCJqdGkiOiI0MjMwZjYwMDE4MjhhZThjNzhkYmQwYjcxMjAxODg0YjhmYTQwOTEzY2ZjYjcxZjFiNjk2OWJlZTMxZmJkMzFhMDBjZjYyZTE5ZTIyZDE2NSIsImlhdCI6MTc3MDk4ODE1MywibmJmIjoxNzcwOTg4MTUzLCJleHAiOjE3NzEwNzQ1NTMsInN1YiI6IjEzNDg2MDY2IiwiZ3JhbnRfdHlwZSI6IiIsImFjY291bnRfaWQiOjMyODk0NDkwLCJiYXNlX2RvbWFpbiI6ImFtb2NybS5ydSIsInZlcnNpb24iOjIsInNjb3BlcyI6WyJwdXNoX25vdGlmaWNhdGlvbnMiLCJmaWxlcyIsImNybSIsImZpbGVzX2RlbGV0ZSIsIm5vdGlmaWNhdGlvbnMiXSwiaGFzaF91dWlkIjoiMDYwMThlMjMtNzE3YS00YThiLTg3ZGUtZjM5MDQ0NTIyMzA3IiwiYXBpX2RvbWFpbiI6ImFwaS1iLmFtb2NybS5ydSJ9.L0_2lCLbZRl4hCUWY0uLVUtmq8ofGo3bxYaDKfVPDfGooGK4fFbxvu5VU0M7eZ3dOxvRp8WWHc0_rp9Uejz4JE5GZVcNlH0T2otp3Gjun0gVOeA2aR5apS_PwdvnM6MITAfdiAvak9opEPBoPRTgsXByL0loadAk0ZQA-NvCd53ZlGQPt-WpvRn4GL5_znm-hQ_YfkscMaTiV63maFIpZ4-kM1DibPeAf4nkuVaZ1Ql7r37URtSt1BQDfj_5H2waamqs7JdP4jP_tDTN4HnV0jNLeRPYSkOLNh1S3gRS2wC-hvV79Y9dB81at24jBMoLpgs5zSL7UMSPj8DOfKWunw'
 
 # Оставляем только цифры
 def clean_phone(phone: str) -> str:
     return re.sub(r'\D', '', phone)
 
-# Поиск контакта по телефону
-async def find_contacts_by_phone(phone: str, subdomain: str):
+
+# --- Основная логика ---
+
+async def _get_contacts(subdomain: str, query: str):
     url = f'https://{subdomain}.amocrm.ru/api/v4/contacts'
     headers = {'Authorization': f'Bearer {access_token}'}
-    phone = clean_phone(phone)
     params = {
-        'query': f'{phone}',
+        'query': f'{query}',
         'with': 'leads',
     }
 
@@ -28,23 +29,14 @@ async def find_contacts_by_phone(phone: str, subdomain: str):
             return contacts
         return response.status_code, response.text
 
+
+# Поиск контакта по телефону
+async def find_contacts_by_phone(phone: str, subdomain: str):
+    return await _get_contacts(subdomain, clean_phone(phone))
+
 # Поиск контакта по его айди
 async def find_contact_by_id(contact_id: str, subdomain: str):
-    url = f'https://{subdomain}.amocrm.ru/api/v4/contacts'
-    headers = {'Authorization': f'Bearer {access_token}'}
-    params = {
-        'query': f'{contact_id}',
-        'with': 'leads',
-    }
-
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url, headers=headers, params=params)
-
-            
-        if response.status_code == 200:
-            contacts = response.json().get("_embedded", {}).get("contacts", [])
-            return contacts
-        return []
+    return await _get_contacts(subdomain, contact_id)
 
 
 # Передаём список контактов. 
@@ -92,13 +84,18 @@ async def delete_contact(subdomain: str, contact_id: str):
 
 # Обновляем поля
 async def update_original_contact(original: dict[str, str], duplicate: dict[str, str], subdomain: str):
-
+    # Здесь будут отсутствующие поля у оригинала, но существующие у дубликата
+    payload = {
+            "custom_fields_values": [
+            ]
+        }
+    
     original_contact = await find_contact_by_id(original['id'], subdomain)
     duplicate_contact = await find_contact_by_id(duplicate['id'], subdomain)
 
     # Существующие поля дупликата и оригинала 
-    existings_duplicate_fields = duplicate_contact[0].get('custom_fields_values')
-    existings_original_fields = original_contact[0].get('custom_fields_values')
+    existings_duplicate_fields = duplicate_contact[0].get('custom_fields_values') or []
+    existings_original_fields = original_contact[0].get('custom_fields_values') or []
 
     # Названия существующих полей
     existings_duplicate_field_names = {field_code.get('field_code') for field_code in existings_duplicate_fields}
@@ -106,25 +103,20 @@ async def update_original_contact(original: dict[str, str], duplicate: dict[str,
 
     # Отсутствующие поля у оригинала
     missing_field_names = existings_duplicate_field_names - existings_original_field_names
+    # Если есть отсутствующие поля то заполняем их
+    if missing_field_names:
 
+        # Заполняются отсутствующие поля у оригинала
+        for i in existings_duplicate_fields:
+            if i.get('field_code') in missing_field_names:
+                payload.get('custom_fields_values').append(i)
+                missing_field_names.remove(i.get('field_code')) # пОСЛЕ КОММИТА УДАЛИТЬ ЭТУ СТРоку
 
     url = f'https://kostantinef.amocrm.ru/api/v4/contacts/{original_contact[0].get('id')}'
     headers = {
         'Authorization': f'Bearer {access_token}',
         'Content-Type': 'application/json'
     }
-
-    # Здесь будут отсутствующие поля у оригинала, но существующие у дубликата
-    payload = {
-            "custom_fields_values": [
-            ]
-        }
-    # Заполняются отсутствующие поля у оригинала
-    for i in existings_duplicate_fields:
-        if i.get('field_code') in missing_field_names:
-            payload.get('custom_fields_values').append(i)
-            missing_field_names.remove(i.get('field_code')) # пОСЛЕ КОММИТА УДАЛИТЬ ЭТУ СТРоку
-
     async with httpx.AsyncClient() as client:
         response = await client.patch(url, headers=headers, json=payload)
         if response.status_code == 200:
