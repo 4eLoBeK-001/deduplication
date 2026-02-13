@@ -8,9 +8,6 @@ access_token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6ImJmMmE4MjEzMDVkZGJk
 def clean_phone(phone: str) -> str:
     return re.sub(r'\D', '', phone)
 
-
-    
-
 async def find_contacts_by_phone(phone: str, subdomain: str):
     url = f'https://{subdomain}.amocrm.ru/api/v4/contacts'
     headers = {'Authorization': f'Bearer {access_token}'}
@@ -97,9 +94,6 @@ async def update_original_contact(original, duplicate, subdomain: str):
     original_contact = await find_contact_by_id(original['id'], subdomain)
     duplicate_contact = await find_contact_by_id(duplicate['id'], subdomain)
 
-    # print('------------ ПОЛЕ -------------')
-    # pprint(duplicate_contact[0])
-    # pprint(original_contact[0])
     # Существующие поля дупликата и оригинала 
     existings_duplicate_fields = duplicate_contact[0].get('custom_fields_values')
     existings_original_fields = original_contact[0].get('custom_fields_values')
@@ -129,18 +123,12 @@ async def update_original_contact(original, duplicate, subdomain: str):
             payload.get('custom_fields_values').append(i)
             missing_field_names.remove(i.get('field_code')) # пОСЛЕ КОММИТА УДАЛИТЬ ЭТУ СТРоку
 
-
-
     async with httpx.AsyncClient() as client:
         response = await client.patch(url, headers=headers, json=payload)
         if response.status_code == 200:
             await delete_contact(subdomain, str(duplicate['id']))
             return response.json(), response.text
         return response.status_code, response.text
-    
-
-# asyncio.run(all_contacts('kostantinef')) 
-# 4545454545
 
 
 # Для того чтобы привязать сделку к контакту нужно: айди сделки и айди контакта
@@ -222,14 +210,11 @@ async def extract_phone_final(data):
             break
     
     if not phone_index:
-        print('Поле PHONE не найдено')
         return None
 
     # Ищет значение 'value', которое принадлежит этому индексу.
     for key, value in data.items():
         if phone_index in key and '[value]' in key:
-            print(f'Телефон: {value}')
             return value
 
-    print('Индекс найден, нок телефон нет')
     return None
