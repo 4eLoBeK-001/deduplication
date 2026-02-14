@@ -1,16 +1,15 @@
 import asyncio
 import os
-import httpx
 
 from dotenv import load_dotenv
 from pprint import pprint
 from fastapi import FastAPI, Request
 
 from app.services.helpers import (
-    extract_phone_final, find_contacts_by_phone, clean_phone, 
-    find_duplicate, get_contact_notes, link_lead_to_contact, 
-    transfer_notes, update_original_contact
+    find_contacts_by_phone, find_duplicate, get_contact_notes, 
+    link_lead_to_contact, transfer_notes, update_original_contact
 )
+from app.services.utils import clean_phone, extract_phone_final
 
 load_dotenv()
 
