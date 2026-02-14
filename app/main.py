@@ -81,5 +81,6 @@ async def test_request(request: Request):
         return {'status': 'ok'}
 
     except Exception as e:
-        logger.exception('Error in webhook')
+        params = f'Phone: {original_phone}, lead_id: {lead_id}'
+        logger.error(f'Ошибка при обработке вебхука. Параметры: {params}. Ошибка: {e}')
         raise

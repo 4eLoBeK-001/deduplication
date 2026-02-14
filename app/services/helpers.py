@@ -1,5 +1,6 @@
 import httpx
 from app.services.utils import clean_phone
+from app.core.logger import logger
 
 access_token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6IjI5NGI5YzQ5YjgzYTZlOGMyODA2NDU5ZDZlYjFmMDJhYjdhNzRiNmFiZjZkZDQ4OTA2MDdiODQ5MDUwZWVjMDcyMmFhMTBkNWRlNjBiNjRjIn0.eyJhdWQiOiIxYTMwYTA4ZS04MzhjLTRiYWItYTczYy0wMTkyNTIxOTI3YWEiLCJqdGkiOiIyOTRiOWM0OWI4M2E2ZThjMjgwNjQ1OWQ2ZWIxZjAyYWI3YTc0YjZhYmY2ZGQ0ODkwNjA3Yjg0OTA1MGVlYzA3MjJhYTEwZDVkZTYwYjY0YyIsImlhdCI6MTc3MTA3NzA5NiwibmJmIjoxNzcxMDc3MDk2LCJleHAiOjE3NzExNjM0OTYsInN1YiI6IjEzNDg2MDY2IiwiZ3JhbnRfdHlwZSI6IiIsImFjY291bnRfaWQiOjMyODk0NDkwLCJiYXNlX2RvbWFpbiI6ImFtb2NybS5ydSIsInZlcnNpb24iOjIsInNjb3BlcyI6WyJwdXNoX25vdGlmaWNhdGlvbnMiLCJmaWxlcyIsImNybSIsImZpbGVzX2RlbGV0ZSIsIm5vdGlmaWNhdGlvbnMiXSwiaGFzaF91dWlkIjoiZWVmMDYxODktMDE5OC00NGMxLWE4NTAtNGQ4YWViYjNkM2VjIiwiYXBpX2RvbWFpbiI6ImFwaS1iLmFtb2NybS5ydSJ9.V8qHkj4VQv0PMCOTYDeSfp7OLzh6qrDVCPrCEzSGBRf-r6IUHpSrmfe2pTIyu_4KBvdcHwl5bpgC0QCOQ7kQUOgu-Zcpf7P4HXoF71Iu4DuO1bZTRfmcf6zzP4-N8XiJHSOf1cs5Erp4U3GBCVJ0aXLaWBvxfgNpZ2Cc1m3kJNzYFfjGAlYd1SnKUzKMXe0c0sZmH36GTG1UEHgJPjZLPLZdBRU3Bhu_8x5NbCPwISx_3X0xTjcPsU4quuWDV8yObIzx_4sJ6KhMPgg2LB03t1__cY8Hj7YL4sSm4EAMmXggj5v3obXMAddp8kHGQFsO_lSQm-PIKin_YlzlsXEiBQ'
 
@@ -20,12 +21,18 @@ async def _get_contacts(subdomain: str, query: str):
     }
 
     async with httpx.AsyncClient() as client:
-        response = await client.get(url, headers=headers, params=params)
+        try:
+            response = await client.get(url, headers=headers, params=params)
 
-        if response.status_code == 200:
-            contacts = response.json().get("_embedded", {}).get("contacts", [])
-            return contacts
-        return response.status_code, response.text
+            if response.status_code == 200:
+                contacts = response.json().get("_embedded", {}).get("contacts", [])
+                return contacts
+        except httpx.HTTPStatusError as e:
+            logger.error(f'Ошибка API amoCRM: {e.response.status_code} при поиске {query}')
+            return []
+        except Exception as e:
+            logger.error(f'Неожиданная ошибка при поиске контактов: {e}')
+            return []
 
 
 # --- Основная логика ---
@@ -43,18 +50,22 @@ async def find_contact_by_id(contact_id: str, subdomain: str):
 # Возвращает оригинал и самый новый контакт
 async def find_duplicate(contacts: list):
     if not contacts:
-        return None
+        logger.warning('Попытка найти дубликаты в пустом списке')
+        return None, None
 
-    lst = []
-    for contact in contacts:
-        lst.append(
-            {'id': contact.get('id'), 'created_at': contact.get('created_at')}
-        )
-        
-    original = min(lst, key=lambda x: x['id'])
-    duplicate = max(lst, key=lambda x: x['id'])
-    return original, duplicate
-
+    try:
+        lst = []
+        for contact in contacts:
+            lst.append(
+                {'id': contact.get('id'), 'created_at': contact.get('created_at')}
+            )
+            
+        original = min(lst, key=lambda x: x['id'])
+        duplicate = max(lst, key=lambda x: x['id'])
+        return original, duplicate
+    except KeyError as e:
+        logger.error(f'Ошибка ключа: {e}')
+        return None, None
 
 # Стираются все custom_fields_values
 async def delete_contact(subdomain: str, contact_id: str):
