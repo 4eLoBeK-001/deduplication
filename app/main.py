@@ -2,21 +2,32 @@ import asyncio
 import os
 import uuid
 
+from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from pprint import pprint
 from fastapi import FastAPI, Request
 
 from app.core.client import AmoCRMClient
+from app.core.redis_config import check_redis_connection
 from app.services.helpers import find_duplicate
 from app.services.utils import clean_phone, extract_phone_final
 from app.core.logger import logger
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    connected = await check_redis_connection()
+    if not connected:
+        print('Редис не доступен')
+    yield
+
 
 load_dotenv()
 
 SUBDOMAIN = os.getenv('AMOCRM_SUBDOMAIN')
 
 
-app = FastAPI(title='amoCRM')
+app = FastAPI(title='amoCRM', lifespan=lifespan)
 
 
 @app.get('/')
