@@ -7,10 +7,7 @@ from pprint import pprint
 from fastapi import FastAPI, Request
 
 from app.core.client import AmoCRMClient
-from app.services.helpers import (
-    find_contacts_by_phone, find_duplicate, get_contact_notes, 
-    link_lead_to_contact, transfer_notes, update_original_contact
-)
+from app.services.helpers import find_duplicate
 from app.services.utils import clean_phone, extract_phone_final
 from app.core.logger import logger
 
@@ -51,10 +48,6 @@ async def test_request(request: Request):
                 found_contacts = await amo.find_contacts_by_phone(original_phone)
                 logger.info(f'Contacts found: {len(found_contacts)}')
 
-                # Если у контакта есть сделки
-                lead_id = 0
-                if found_contacts[-1].get('_embedded').get('leads'):
-                    lead_id = found_contacts[-1].get('_embedded').get('leads')[0].get('id')
 
                 if len(found_contacts) > 1:
                     logger.info('Duplicate detected')
@@ -66,15 +59,17 @@ async def test_request(request: Request):
                     # После того как поняли что есть оригинал, ждём 2 секунды
                     await asyncio.sleep(2)
 
+                    full_duplicate = await amo.find_contact_by_id(duplicate['id'])
+                    # Если у контакта есть сделки
+                    leads = full_duplicate[0].get('_embedded').get('leads') or []
+                    if leads:
+                        for lead in leads:
+                            await amo.link_lead_to_contact(lead['id'], original.get('id'))
 
                     logger.info('Starting merge process')
                     # Обновляем поля у оригинала
                     await amo.update_original_contact(original['id'], duplicate['id'])
                     logger.info('Merge completed')
-
-                    if lead_id:
-                        # Привязываем сделки из дубликата к оригиналу
-                        await amo.link_lead_to_contact(lead_id, original.get('id'))
 
                     # Переносим примечания
                     notes = await amo.get_contact_notes(duplicate.get('id'))
@@ -84,6 +79,6 @@ async def test_request(request: Request):
             return {'status': 'ok'}
 
         except Exception as e:
-            params = f'Phone: {original_phone}, lead_id: {lead_id}'
+            params = f'Phone: {original_phone}, leads: {leads}'
             logger.exception(f'Ошибка при обработке вебхука. Параметры: {params}. Ошибка: {e}')
             return {'status': 'error', 'details': str(e)}
