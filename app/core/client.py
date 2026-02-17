@@ -3,7 +3,7 @@ from app.services.utils import clean_phone
 from app.core.logger import logger
 
 
-ACCESS_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6IjI5NGI5YzQ5YjgzYTZlOGMyODA2NDU5ZDZlYjFmMDJhYjdhNzRiNmFiZjZkZDQ4OTA2MDdiODQ5MDUwZWVjMDcyMmFhMTBkNWRlNjBiNjRjIn0.eyJhdWQiOiIxYTMwYTA4ZS04MzhjLTRiYWItYTczYy0wMTkyNTIxOTI3YWEiLCJqdGkiOiIyOTRiOWM0OWI4M2E2ZThjMjgwNjQ1OWQ2ZWIxZjAyYWI3YTc0YjZhYmY2ZGQ0ODkwNjA3Yjg0OTA1MGVlYzA3MjJhYTEwZDVkZTYwYjY0YyIsImlhdCI6MTc3MTA3NzA5NiwibmJmIjoxNzcxMDc3MDk2LCJleHAiOjE3NzExNjM0OTYsInN1YiI6IjEzNDg2MDY2IiwiZ3JhbnRfdHlwZSI6IiIsImFjY291bnRfaWQiOjMyODk0NDkwLCJiYXNlX2RvbWFpbiI6ImFtb2NybS5ydSIsInZlcnNpb24iOjIsInNjb3BlcyI6WyJwdXNoX25vdGlmaWNhdGlvbnMiLCJmaWxlcyIsImNybSIsImZpbGVzX2RlbGV0ZSIsIm5vdGlmaWNhdGlvbnMiXSwiaGFzaF91dWlkIjoiZWVmMDYxODktMDE5OC00NGMxLWE4NTAtNGQ4YWViYjNkM2VjIiwiYXBpX2RvbWFpbiI6ImFwaS1iLmFtb2NybS5ydSJ9.V8qHkj4VQv0PMCOTYDeSfp7OLzh6qrDVCPrCEzSGBRf-r6IUHpSrmfe2pTIyu_4KBvdcHwl5bpgC0QCOQ7kQUOgu-Zcpf7P4HXoF71Iu4DuO1bZTRfmcf6zzP4-N8XiJHSOf1cs5Erp4U3GBCVJ0aXLaWBvxfgNpZ2Cc1m3kJNzYFfjGAlYd1SnKUzKMXe0c0sZmH36GTG1UEHgJPjZLPLZdBRU3Bhu_8x5NbCPwISx_3X0xTjcPsU4quuWDV8yObIzx_4sJ6KhMPgg2LB03t1__cY8Hj7YL4sSm4EAMmXggj5v3obXMAddp8kHGQFsO_lSQm-PIKin_YlzlsXEiBQ'
+ACCESS_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6IjY5ZDBjMzg1ZWQ0ZDRkYmEyYzkxODk2MDQwZGU1NzU5YzE0OGZiNzA3NWMzYWQ0NjEzZmVmYTgxNWUwNmMxOTFhMTc1ZTk4MjQyODJkNGMzIn0.eyJhdWQiOiIxYTMwYTA4ZS04MzhjLTRiYWItYTczYy0wMTkyNTIxOTI3YWEiLCJqdGkiOiI2OWQwYzM4NWVkNGQ0ZGJhMmM5MTg5NjA0MGRlNTc1OWMxNDhmYjcwNzVjM2FkNDYxM2ZlZmE4MTVlMDZjMTkxYTE3NWU5ODI0MjgyZDRjMyIsImlhdCI6MTc3MTMyNTQxMiwibmJmIjoxNzcxMzI1NDEyLCJleHAiOjE3NzE0MTE4MTIsInN1YiI6IjEzNDg2MDY2IiwiZ3JhbnRfdHlwZSI6IiIsImFjY291bnRfaWQiOjMyODk0NDkwLCJiYXNlX2RvbWFpbiI6ImFtb2NybS5ydSIsInZlcnNpb24iOjIsInNjb3BlcyI6WyJwdXNoX25vdGlmaWNhdGlvbnMiLCJmaWxlcyIsImNybSIsImZpbGVzX2RlbGV0ZSIsIm5vdGlmaWNhdGlvbnMiXSwiaGFzaF91dWlkIjoiNjllNTQ2ZGUtODNmOS00ZWVhLWEwNDgtNWU5MWQ2MzdlMTZiIiwiYXBpX2RvbWFpbiI6ImFwaS1iLmFtb2NybS5ydSJ9.QU15f9bKLhBS6akkNGDsABBYkyl_QrIH6-1JicfFCYebfOL9kkdSN03NNX01hMWTydVJpvdsVkRbSzfbOCv787yBxD-6zqSE-qjextWLpm1JqpYDB4ycFy-9MkkX4weYkum8KxCj63cw2BeJXBqUaUpsoA-ovigxByIrgTvrABdUjLFDMuPp40oGWTsXnukhuTx2YhkK2szgyekpmR0K_e4ftrHJFXDBalIPZFJrsMgFGXk7KlMK_TbW8jhMnO5ieKTx57H10tFpxEGTtg6AXiyu6R_KPZw-NGJY0Qn6zdb2zNUL4KPFvIMtB5jFZlGflEBl7d62f-5uD9ngTEyedQ'
 
 class AmoCRMClient:
     def __init__(self, subdomain: str, token: str = ACCESS_TOKEN):
@@ -11,6 +11,13 @@ class AmoCRMClient:
         self.base_url = f'https://{subdomain}.amocrm.ru/api/v4'
         self.token = token
         self.client = httpx.AsyncClient()
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.client.aclose()
+
 
     def _headers(self, json_type: bool = False):
         headers = {'Authorization': f'Bearer {self.token}'}
@@ -60,10 +67,10 @@ class AmoCRMClient:
 
         # Все поля кастомные поля опустошаются у этого контакта
         for i in contact[0].get('custom_fields_values'):
-            i['values'][0]['value'] = ''
+            i.get('values')[0]['value'] = ''
             payload.get('custom_fields_values').append(i)
 
-        response = await self.client.patch(url, headers, json=payload)
+        response = await self.client.patch(url, headers=headers, json=payload)
 
         if response.status_code == 200:
             return 'Дубль обработан'
