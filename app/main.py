@@ -8,7 +8,7 @@ from pprint import pprint
 from fastapi import BackgroundTasks, FastAPI, Request
 
 from app.core.client import AmoCRMClient
-from app.core.redis_config import check_redis_connection
+from app.core.redis_config import check_redis_connection, get_cache, set_cache
 from app.services.helpers import find_duplicate
 from app.services.utils import clean_phone, extract_phone_final
 from app.core.logger import logger
@@ -37,8 +37,14 @@ async def test(request: Request):
 
 
 async def process_contact_merge(original_phone: str, data: dict):
-    redis_lock = f'lock:contact:{original_phone}'
+    leads = None
+    # Данные нового контакта.
+    new_contact_id = data.get('contacts[add][0][id]')
 
+    redis_lock = f'lock:contact:{original_phone}'
+    cache_key = f'contact:phone:{original_phone}'
+
+    # Блок 1: Блокировка
     is_locked = await redis_client.set(redis_lock, 'processing', ex=60, nx=True)
 
     if not is_locked: 
@@ -49,34 +55,50 @@ async def process_contact_merge(original_phone: str, data: dict):
         logger.info('Webhook data parsed')
         
         async with AmoCRMClient(SUBDOMAIN) as amo:
-            found_contacts = await amo.find_contacts_by_phone(original_phone)
-            logger.info(f'Contacts found: {len(found_contacts)}')
+            # Блок 2: кэширование 
+            original_id = await get_cache(cache_key)
+            # Если айди контакта нет в кэше 
+            if not original_id:
+                found_contacts = await amo.find_contacts_by_phone(original_phone)
+                logger.info(f'Contacts found: {len(found_contacts)}')
+
+                if not found_contacts:
+                    return 
 
 
-            if len(found_contacts) > 1:
-                logger.info('Duplicate detected')
-                original, duplicate = await find_duplicate(found_contacts)
-                logger.info(
-                    f'Original ID={original.get('id')} | Duplicate ID={duplicate.get('id')}'
-                )
+                if len(found_contacts) > 1:
+                    logger.info('Duplicate detected')
+                    original, _ = await find_duplicate(found_contacts)
+                    logger.info(
+                        f'Original ID={original.get('id')} | Duplicate ID={new_contact_id}'
+                    )
+                    original_id = original.get('id')
+                else:
+                    original_id = found_contacts[0].get('id')
+
+                await set_cache(cache_key, str(original_id))
+
+            # Блок 3: Если новый контакт - не сам оригинал
+            if str(new_contact_id) != str(original_id):
 
                 # После того как поняли что есть оригинал, ждём 2 секунды
                 await asyncio.sleep(2)
 
-                full_duplicate = await amo.find_contact_by_id(duplicate['id'])
+                full_duplicate = await amo.find_contact_by_id(new_contact_id)
+
                 # Если у контакта есть сделки
-                leads = full_duplicate[0].get('_embedded').get('leads') or []
+                leads = full_duplicate[0].get('_embedded', {}).get('leads', [])
                 if leads:
                     for lead in leads:
-                        await amo.link_lead_to_contact(lead['id'], original.get('id'))
+                        await amo.link_lead_to_contact(lead['id'], original_id)
 
                 logger.info('Starting merge process')
                 # Обновляем поля у оригинала
-                await amo.update_original_contact(original['id'], duplicate['id'])
+                await amo.update_original_contact(original_id, new_contact_id)
 
                 # Переносим примечания
-                notes = await amo.get_contact_notes(duplicate.get('id'))
-                await amo.transfer_notes(notes, original.get('id'))
+                notes = await amo.get_contact_notes(new_contact_id)
+                await amo.transfer_notes(notes, original_id)
 
                 logger.info('Merge completed')
             else:
@@ -110,8 +132,8 @@ async def test_request(request: Request, background_task: BackgroundTasks):
             return {'text': 'phone nt found'}
         
         logger.info(f'Phone extracted: {original_phone}')
-
-        background_task.add(process_contact_merge, original_phone, data)
+        
+        background_task.add_task(process_contact_merge, original_phone, data)
 
         return {'status': 'ok'}
     
