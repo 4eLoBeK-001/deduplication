@@ -3,7 +3,7 @@ from app.services.utils import clean_phone
 from app.core.logger import logger
 
 
-ACCESS_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6IjY5ZDBjMzg1ZWQ0ZDRkYmEyYzkxODk2MDQwZGU1NzU5YzE0OGZiNzA3NWMzYWQ0NjEzZmVmYTgxNWUwNmMxOTFhMTc1ZTk4MjQyODJkNGMzIn0.eyJhdWQiOiIxYTMwYTA4ZS04MzhjLTRiYWItYTczYy0wMTkyNTIxOTI3YWEiLCJqdGkiOiI2OWQwYzM4NWVkNGQ0ZGJhMmM5MTg5NjA0MGRlNTc1OWMxNDhmYjcwNzVjM2FkNDYxM2ZlZmE4MTVlMDZjMTkxYTE3NWU5ODI0MjgyZDRjMyIsImlhdCI6MTc3MTMyNTQxMiwibmJmIjoxNzcxMzI1NDEyLCJleHAiOjE3NzE0MTE4MTIsInN1YiI6IjEzNDg2MDY2IiwiZ3JhbnRfdHlwZSI6IiIsImFjY291bnRfaWQiOjMyODk0NDkwLCJiYXNlX2RvbWFpbiI6ImFtb2NybS5ydSIsInZlcnNpb24iOjIsInNjb3BlcyI6WyJwdXNoX25vdGlmaWNhdGlvbnMiLCJmaWxlcyIsImNybSIsImZpbGVzX2RlbGV0ZSIsIm5vdGlmaWNhdGlvbnMiXSwiaGFzaF91dWlkIjoiNjllNTQ2ZGUtODNmOS00ZWVhLWEwNDgtNWU5MWQ2MzdlMTZiIiwiYXBpX2RvbWFpbiI6ImFwaS1iLmFtb2NybS5ydSJ9.QU15f9bKLhBS6akkNGDsABBYkyl_QrIH6-1JicfFCYebfOL9kkdSN03NNX01hMWTydVJpvdsVkRbSzfbOCv787yBxD-6zqSE-qjextWLpm1JqpYDB4ycFy-9MkkX4weYkum8KxCj63cw2BeJXBqUaUpsoA-ovigxByIrgTvrABdUjLFDMuPp40oGWTsXnukhuTx2YhkK2szgyekpmR0K_e4ftrHJFXDBalIPZFJrsMgFGXk7KlMK_TbW8jhMnO5ieKTx57H10tFpxEGTtg6AXiyu6R_KPZw-NGJY0Qn6zdb2zNUL4KPFvIMtB5jFZlGflEBl7d62f-5uD9ngTEyedQ'
+ACCESS_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6ImFlNDFjZWI0ZjZhY2QzNjZhZjJjNjcwZjgyMGZlOWE3OTRlYTNiYzYzNzZjY2RjZDJhM2Y5NjI1MThkNTE5MGZlNWFlMjkwOTAxZDA0ZWNjIn0.eyJhdWQiOiIxYTMwYTA4ZS04MzhjLTRiYWItYTczYy0wMTkyNTIxOTI3YWEiLCJqdGkiOiJhZTQxY2ViNGY2YWNkMzY2YWYyYzY3MGY4MjBmZTlhNzk0ZWEzYmM2Mzc2Y2NkY2QyYTNmOTYyNTE4ZDUxOTBmZTVhZTI5MDkwMWQwNGVjYyIsImlhdCI6MTc3MTYwNzMwNywibmJmIjoxNzcxNjA3MzA3LCJleHAiOjE3NzE2OTM3MDcsInN1YiI6IjEzNDg2MDY2IiwiZ3JhbnRfdHlwZSI6IiIsImFjY291bnRfaWQiOjMyODk0NDkwLCJiYXNlX2RvbWFpbiI6ImFtb2NybS5ydSIsInZlcnNpb24iOjIsInNjb3BlcyI6WyJwdXNoX25vdGlmaWNhdGlvbnMiLCJmaWxlcyIsImNybSIsImZpbGVzX2RlbGV0ZSIsIm5vdGlmaWNhdGlvbnMiXSwiaGFzaF91dWlkIjoiNTBiNjc5YjQtYWVmOS00ZTJlLThiNjAtY2Q2NTQ4ZjZlNTg3IiwiYXBpX2RvbWFpbiI6ImFwaS1iLmFtb2NybS5ydSJ9.QRRDsp2wbzfBI2A5WryN05oJFFqJwPBWX2Rnh3Wp6Cl_D13KEZtQRJzbzSuwcsNOde-evzQ7Q2uJ-DZKlPGW522ptGV11qKCd1Mjq_hRBnlP3eD9BnaM0_MTkfgyv00J6HYxb8dyCNpbnYv13c8qDt1XQJ3bCajQcqn9eBJ6h4WdGS2S9OPj-m7IdngMPZq4K4b2WnkGU-QrmM0Yjd2Rit7fgg-tGS049RZZW8tq-2j5QnnfhPKWqQCGe1TzuxFO9-2pf4169TNnzxVsuhRiPOwvLkrDMYC7pPPXeZMq_jkqZSkDPFJ9HF5j5sC_fAYzBRRYF0hTvoignLeUbO3RqA'
 
 class AmoCRMClient:
     def __init__(self, subdomain: str, token: str = ACCESS_TOKEN):
@@ -36,7 +36,7 @@ class AmoCRMClient:
             response = await self.client.get(url, headers=self._headers(), params=params)
 
             if response.status_code == 200:
-                return response.json().get("_embedded", {}).get("contacts", [])
+                return response.json().get('_embedded', {}).get('contacts', [])
             return []
         except httpx.HTTPStatusError as e:
             logger.error(f'Ошибка API amoCRM: {e.response.status_code} при поиске {query}')
@@ -51,8 +51,41 @@ class AmoCRMClient:
 
     # Поиск контакта по его айди
     async def find_contact_by_id(self, contact_id: str):
-        return await self.get_contacts(contact_id)
+        url = f'{self.base_url}/contacts/{contact_id}'
+        params = {'with': 'leads'}
+        response = await self.client.get(url, headers=self._headers(), params=params)
+        if response.status_code == 200:
+            return [response.json()]
+        return []
     
+    async def find_contact_by_tg_nick(self, tg_nick: str):
+        url = f'{self.base_url}/contacts'
+        headers = self._headers()
+
+        params = {
+            'limit': 250,
+            'with': 'leads'
+        }
+
+        response = await self.client.get(url, headers=headers, params=params)
+
+        if response.status_code != 200:
+            logger.error(f'Ошибка не р: {response.status_code} - {response.text}')
+            return []
+
+        contacts = response.json().get('_embedded', {}).get('contacts', [])
+
+        filtered = []
+
+        for contact in contacts:
+            fields = contact.get('custom_fields_values') or []
+            for field in fields:
+                if field.get('field_id') == 2400145:
+                    for value in field.get('values', []):
+                        if value.get('value') == tg_nick:
+                            filtered.append(contact)
+        return filtered
+
     # Стираются все custom_fields
     async def delete_contact(self, contact_id: str):
         payload = {
@@ -80,7 +113,7 @@ class AmoCRMClient:
     async def update_original_contact(self, original_id: int, duplicate_id: int):
         # Здесь будут отсутствующие поля у оригинала, но существующие у дубликата
         payload = {
-            "custom_fields_values": [
+            'custom_fields_values': [
             ]
         }
         url = f'{self.base_url}/contacts/{original_id}'
@@ -88,6 +121,14 @@ class AmoCRMClient:
         
         original_contact = await self.find_contact_by_id(str(original_id))
         duplicate_contact = await self.find_contact_by_id(str(duplicate_id))
+
+        if not original_contact:
+            logger.error(f'Original contact {original_id} not found')
+            return
+
+        if not duplicate_contact:
+            logger.error(f'Duplicate contact {duplicate_id} not found')
+            return
 
         # Существующие поля дупликата и оригинала 
         existings_duplicate_fields = duplicate_contact[0].get('custom_fields_values') or []
@@ -119,20 +160,26 @@ class AmoCRMClient:
         if lead_id == 0:
             return False
         
-        url = f'{self.base_url}/leads/{lead_id}/link'
+        url = f'{self.base_url}/leads/{lead_id}/link' 
         headers = self._headers(True)
+        
         payload = [
             {
-                'to_entity_id': contact_id,
+                'to_entity_id': int(contact_id),
                 'to_entity_type': 'contacts',
-                'metadata': {'is_main': True}
+                'metadata': {
+                    'is_main': True
+                }
             }
         ]
 
         response = await self.client.post(url, headers=headers, json=payload)
-        if response.status_code in (200, 201, 204):
-            return True
-        return False
+        
+        # Логируем ответ, чтобы увидеть ошибку от amo, если она есть
+        if response.status_code not in (200, 201, 204):
+            logger.error(f'Link error: {response.status_code} - {response.text}')
+            return False
+        return True
     
     
     # Получаем все примечания/заметки контакта. Нужно: айди контакта
