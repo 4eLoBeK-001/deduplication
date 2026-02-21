@@ -1,5 +1,6 @@
 import re
 
+from app.core.logger import logger
 
 
 # Оставляем только цифры
@@ -45,3 +46,24 @@ async def extract_tg_nick_final(data: dict):
 
     return None
 
+
+# Передаём список контактов. 
+# Возвращает оригинал и самый новый контакт
+async def find_duplicate(contacts: list):
+    if not contacts:
+        logger.warning('Попытка найти дубликаты в пустом списке')
+        return None, None
+
+    try:
+        lst = []
+        for contact in contacts:
+            lst.append(
+                {'id': contact.get('id'), 'created_at': contact.get('created_at')}
+            )
+            
+        original = min(lst, key=lambda x: x['id'])
+        duplicate = max(lst, key=lambda x: x['id'])
+        return original, duplicate
+    except KeyError as e:
+        logger.error(f'Ошибка ключа: {e}')
+        return None, None

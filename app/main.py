@@ -9,8 +9,7 @@ from fastapi import BackgroundTasks, FastAPI, Request
 
 from app.core.client import AmoCRMClient
 from app.core.redis_config import check_redis_connection, get_cache, set_cache
-from app.services.helpers import find_duplicate
-from app.services.utils import clean_phone, extract_phone_final, extract_tg_nick_final
+from app.services.utils import find_duplicate, extract_phone_final, extract_tg_nick_final
 from app.core.logger import logger
 from app.core.redis_config import redis_client
 
