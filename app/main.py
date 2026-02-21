@@ -36,133 +36,134 @@ async def test(request: Request):
     return {'status': 'ok'}
 
 
-async def process_contact_merge(original_phone: str | None, tg_nick: str | None, data: dict):
-    start_time = asyncio.get_event_loop().time()
+async def process_contact_merge(original_phone: str | None, tg_nick: str | None, data: dict, request_id: str):
+    with logger.contextualize(request_id=request_id):
+        start_time = asyncio.get_event_loop().time()
 
-    leads = None
-    # Данные нового контакта.
-    new_contact_id = data.get('contacts[add][0][id]')
-
-    lock_id = original_phone if original_phone else f'tg_{tg_nick}'
-    redis_lock = f'lock:contact:{lock_id}'
-
-    cache_key_phone = f'contact:phone:{original_phone}' if original_phone else None
-    cache_key_tg = f'contact:tg:{tg_nick}' if tg_nick else None
-    
-    # Блок 1: Блокировка
-    is_locked = await redis_client.set(redis_lock, 'processing', ex=60, nx=True)
-
-    if not is_locked: 
-        logger.warning(f'Игнор номера {original_phone}, т.к. он уже обрабатывается')
-        return
-    
-    try:
-        await redis_client.incr('stats:total_webhooks')
-
-        original_id = None
         leads = None
+        # Данные нового контакта.
+        new_contact_id = data.get('contacts[add][0][id]')
 
-        logger.info('Webhook data parsed')
+        lock_id = original_phone if original_phone else f'tg_{tg_nick}'
+        redis_lock = f'lock:contact:{lock_id}'
+
+        cache_key_phone = f'contact:phone:{original_phone}' if original_phone else None
+        cache_key_tg = f'contact:tg:{tg_nick}' if tg_nick else None
         
-        async with AmoCRMClient(SUBDOMAIN) as amo:
-            logger.info(f'Cache phone key: {cache_key_phone}')
-            logger.info(f'Cache tg key: {cache_key_tg}')
+        # Блок 1: Блокировка
+        is_locked = await redis_client.set(redis_lock, 'processing', ex=60, nx=True)
 
-            if cache_key_phone:
-                original_id = await get_cache(cache_key_phone)
-                logger.info(f'Original from phone cache: {original_id}')
+        if not is_locked: 
+            logger.warning(f'Игнор номера {original_phone}, т.к. он уже обрабатывается')
+            return
+        
+        try:
+            await redis_client.incr('stats:total_webhooks')
 
-            if not original_id and cache_key_tg:
-                original_id = await get_cache(cache_key_tg)
+            original_id = None
+            leads = None
+
+            logger.info('Webhook data parsed')
             
-            # Блок 2: кэширование 
-            # Если айди контакта нет в кэше 
-            if not original_id:
-                logger.info('block 2')
-                found_contacts = []
-
-                # Поиск по номеру телефона если есть
-                if original_phone:
-                    found_contacts = await amo.find_contacts_by_phone(original_phone)
-                    logger.info(f'Contacts by phone found: {len(found_contacts)}')
-
-                # Если не нашлось по телефону то искать по нику
-                if not found_contacts and tg_nick:
-                    await asyncio.sleep(2)
-                    found_contacts = await amo.find_contact_by_tg_nick(tg_nick)
-
-                if not found_contacts:
-                    logger.info('Contact not found')
-                    return 
-
-
-                if len(found_contacts) > 1:
-                    logger.info('Duplicate detected')
-                    original, _ = await find_duplicate(found_contacts)
-                    logger.info(
-                        f'Original ID={original.get('id')} | Duplicate ID={new_contact_id}'
-                    )
-                    original_id = original.get('id')
-                else:
-                    original_id = found_contacts[0].get('id')
+            async with AmoCRMClient(SUBDOMAIN) as amo:
+                logger.info(f'Cache phone key: {cache_key_phone}')
+                logger.info(f'Cache tg key: {cache_key_tg}')
 
                 if cache_key_phone:
-                    await set_cache(cache_key_phone, str(original_id))
-                if cache_key_tg:
-                    await set_cache(cache_key_tg, str(original_id))
+                    original_id = await get_cache(cache_key_phone)
+                    logger.info(f'Original from phone cache: {original_id}')
 
-            # Блок 3: Если новый контакт - не сам оригинал
-            if str(new_contact_id) != str(original_id):
-                logger.info('block 3')
-                await redis_client.incr('stats:duplicates_detected')
-                original_contact = await amo.find_contact_by_id(str(original_id))
+                if not original_id and cache_key_tg:
+                    original_id = await get_cache(cache_key_tg)
+                
+                # Блок 2: кэширование 
+                # Если айди контакта нет в кэше 
+                if not original_id:
+                    logger.info('block 2')
+                    found_contacts = []
 
-                if not original_contact:
-                    logger.warning(f'Original contact {original_id} not found. Clearing cache.')
-                    
+                    # Поиск по номеру телефона если есть
+                    if original_phone:
+                        found_contacts = await amo.find_contacts_by_phone(original_phone)
+                        logger.info(f'Contacts by phone found: {len(found_contacts)}')
+
+                    # Если не нашлось по телефону то искать по нику
+                    if not found_contacts and tg_nick:
+                        await asyncio.sleep(2)
+                        found_contacts = await amo.find_contact_by_tg_nick(tg_nick)
+
+                    if not found_contacts:
+                        logger.info('Contact not found')
+                        return 
+
+
+                    if len(found_contacts) > 1:
+                        logger.info('Duplicate detected')
+                        original, _ = await find_duplicate(found_contacts)
+                        logger.info(
+                            f'Original ID={original.get('id')} | Duplicate ID={new_contact_id}'
+                        )
+                        original_id = original.get('id')
+                    else:
+                        original_id = found_contacts[0].get('id')
+
                     if cache_key_phone:
-                        await redis_client.delete(cache_key_phone)
+                        await set_cache(cache_key_phone, str(original_id))
                     if cache_key_tg:
-                        await redis_client.delete(cache_key_tg)
+                        await set_cache(cache_key_tg, str(original_id))
 
-                    return
-                # После того как поняли что есть оригинал, ждём 2 секунды
-                await asyncio.sleep(2)
+                # Блок 3: Если новый контакт - не сам оригинал
+                if str(new_contact_id) != str(original_id):
+                    logger.info('block 3')
+                    await redis_client.incr('stats:duplicates_detected')
+                    original_contact = await amo.find_contact_by_id(str(original_id))
 
-                full_duplicate = await amo.find_contact_by_id(new_contact_id)
+                    if not original_contact:
+                        logger.warning(f'Original contact {original_id} not found. Clearing cache.')
+                        
+                        if cache_key_phone:
+                            await redis_client.delete(cache_key_phone)
+                        if cache_key_tg:
+                            await redis_client.delete(cache_key_tg)
 
-                # Если у контакта есть сделки
-                leads = full_duplicate[0].get('_embedded', {}).get('leads', [])
-                if leads:
-                    for lead in leads:
-                        await amo.link_lead_to_contact(lead['id'], original_id)
+                        return
+                    # После того как поняли что есть оригинал, ждём 2 секунды
+                    await asyncio.sleep(2)
 
-                logger.info('Starting merge process')
-                # Обновляем поля у оригинала
-                await amo.update_original_contact(original_id, new_contact_id)
+                    full_duplicate = await amo.find_contact_by_id(new_contact_id)
 
-                # Переносим примечания
-                notes = await amo.get_contact_notes(new_contact_id)
-                await amo.transfer_notes(notes, original_id)
+                    # Если у контакта есть сделки
+                    leads = full_duplicate[0].get('_embedded', {}).get('leads', [])
+                    if leads:
+                        for lead in leads:
+                            await amo.link_lead_to_contact(lead['id'], original_id)
 
-                logger.info('Merge completed')
-            else:
-                logger.info(f'No duolicated for {original_phone}')
+                    logger.info('Starting merge process')
+                    # Обновляем поля у оригинала
+                    await amo.update_original_contact(original_id, new_contact_id)
 
-        logger.info('Webhook processing finished')
+                    # Переносим примечания
+                    notes = await amo.get_contact_notes(new_contact_id)
+                    await amo.transfer_notes(notes, original_id)
 
-        end_time = asyncio.get_event_loop().time()
-        duration = round((end_time - start_time) * 1000, 2)
-        await redis_client.set('stats:last_processing_time_ms', duration)
-        logger.info(f'processing {duration}ms', extra={'duration': duration})
+                    logger.info('Merge completed')
+                else:
+                    logger.info(f'No duolicated for {original_phone}')
 
-    except Exception as e:
-        params = f'Phone: {original_phone}, leads: {leads}'
-        logger.exception(f'Ошибка при обработке вебхука. Параметры: {params}. Ошибка: {e}')
-        await redis_client.incr('stats:errors_count')
-    finally:
-        await redis_client.delete(redis_lock)
-        logger.info(f'Замок для {original_phone} удалён')
+            logger.info('Webhook processing finished')
+
+            end_time = asyncio.get_event_loop().time()
+            duration = round((end_time - start_time) * 1000, 2)
+            await redis_client.set('stats:last_processing_time_ms', duration)
+            logger.info(f'processing {duration}ms', extra={'duration': duration})
+
+        except Exception as e:
+            params = f'Phone: {original_phone}, leads: {leads}'
+            logger.exception(f'Ошибка при обработке вебхука. Параметры: {params}. Ошибка: {e}')
+            await redis_client.incr('stats:errors_count')
+        finally:
+            await redis_client.delete(redis_lock)
+            logger.info(f'Замок для {original_phone} удалён')
 
 
 @app.post('/webhook')
@@ -189,7 +190,7 @@ async def test_request(request: Request, background_task: BackgroundTasks):
         
         logger.info(f'Phone extracted: {original_phone}') if original_phone else None
         
-        background_task.add_task(process_contact_merge, original_phone, tg_nick, data)
+        background_task.add_task(process_contact_merge, original_phone, tg_nick, data, request_id)
 
         return {'status': 'ok'}
 
