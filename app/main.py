@@ -37,6 +37,8 @@ async def test(request: Request):
 
 
 async def process_contact_merge(original_phone: str | None, tg_nick: str | None, data: dict):
+    start_time = asyncio.get_event_loop().time()
+
     leads = None
     # Данные нового контакта.
     new_contact_id = data.get('contacts[add][0][id]')
@@ -55,6 +57,8 @@ async def process_contact_merge(original_phone: str | None, tg_nick: str | None,
         return
     
     try:
+        await redis_client.incr('stats:total_webhooks')
+
         original_id = None
         leads = None
 
@@ -110,6 +114,7 @@ async def process_contact_merge(original_phone: str | None, tg_nick: str | None,
             # Блок 3: Если новый контакт - не сам оригинал
             if str(new_contact_id) != str(original_id):
                 logger.info('block 3')
+                await redis_client.incr('stats:duplicates_detected')
                 original_contact = await amo.find_contact_by_id(str(original_id))
 
                 if not original_contact:
@@ -130,7 +135,6 @@ async def process_contact_merge(original_phone: str | None, tg_nick: str | None,
                 leads = full_duplicate[0].get('_embedded', {}).get('leads', [])
                 if leads:
                     for lead in leads:
-                        logger.info(lead)
                         await amo.link_lead_to_contact(lead['id'], original_id)
 
                 logger.info('Starting merge process')
@@ -147,14 +151,18 @@ async def process_contact_merge(original_phone: str | None, tg_nick: str | None,
 
         logger.info('Webhook processing finished')
 
+        end_time = asyncio.get_event_loop().time()
+        duration = round((end_time - start_time) * 1000, 2)
+        await redis_client.set('stats:last_processing_time_ms', duration)
+        logger.info(f'processing {duration}ms', extra={'duration': duration})
+
     except Exception as e:
         params = f'Phone: {original_phone}, leads: {leads}'
         logger.exception(f'Ошибка при обработке вебхука. Параметры: {params}. Ошибка: {e}')
+        await redis_client.incr('stats:errors_count')
     finally:
         await redis_client.delete(redis_lock)
         logger.info(f'Замок для {original_phone} удалён')
-
-
 
 
 @app.post('/webhook')
@@ -184,4 +192,14 @@ async def test_request(request: Request, background_task: BackgroundTasks):
         background_task.add_task(process_contact_merge, original_phone, tg_nick, data)
 
         return {'status': 'ok'}
-    
+
+
+@app.get('/metrics')
+async def get_metrics():
+    stats = {
+        'total_webhooks': await redis_client.get('stats:total_webhooks'),
+        'duplicates_detected': await redis_client.get('stats:duplicates_detected'),
+        'errors_count': await redis_client.get('stats:errors_count'),
+        'last_processing_time_ms': await redis_client.get('stats:last_processing_time_ms'),      
+    }
+    return stats

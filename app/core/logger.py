@@ -10,7 +10,8 @@ default_fmt = '{time:HH:mm:ss} | {level} | {message}\n'
 logger.add(
     sys.stdout, 
     format=lambda record: fmt if 'request_id' in record['extra'] else default_fmt, 
-    level='INFO'
+    level='INFO',
+    serialize=True,
 )
 
 logger.add(
@@ -18,7 +19,8 @@ logger.add(
     level='INFO', 
     format=lambda record: fmt if 'request_id' in record['extra'] else default_fmt, 
     rotation='50 MB', 
-    compression='zip'
+    compression='zip',
+    serialize=True,
 )
 
 logger.add(
