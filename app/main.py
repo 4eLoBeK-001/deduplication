@@ -203,3 +203,11 @@ async def get_metrics():
         'last_processing_time_ms': await redis_client.get('stats:last_processing_time_ms'),      
     }
     return stats
+
+@app.get('/initial_auth')
+async def initial_auth(auth_code: str):
+    async with AmoCRMClient(SUBDOMAIN) as amo:
+        success = await amo.exchange_code_to_token(auth_code)
+        if success:
+            return {'status': 'ok', 'message': 'Токен добавлен в редис'}
+        return {'status': 'error', 'message': 'Ошибка. Поертье логи'}

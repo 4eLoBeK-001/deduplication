@@ -66,6 +66,27 @@ class AmoCRMClient:
 
             logger.error(f'Ошибка обновления токена: {response.status_code} | {response.text}')
             return False
+    
+    async def exchange_code_to_token(self, auth_code: str):
+        url = f'https://{self.subdomain}.amocrm.ru/oauth2/access_token'
+        payload = {
+            'client_id': CLIENT_ID,
+            'client_secret': CLIENT_SECRET,
+            'grant_type': 'authorization_code',
+            'code': auth_code,
+            'redirect_uri': REDIRECT_URL,
+        }
+        respose = await self.client.post(url, json=payload)
+        if respose.status_code == 200:
+            data = respose.json()
+            await redis_client.set(self.token_key, json.dumps(data))
+            self.access_token = data.get('access_token')
+            logger.info('Первичная авторизация успешна')
+            return True
+
+        logger.error(f'Ошибка: {respose.status_code} - {respose.text}')    
+        return False
+
 
     async def _request(self, method, endpoint, **kwargs):
         if not self.access_token:
