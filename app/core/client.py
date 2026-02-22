@@ -1,22 +1,92 @@
+import json
+import os
+from dotenv import load_dotenv
 import httpx
 from app.services.utils import clean_phone
 from app.core.logger import logger
+from app.core.redis_config import redis_client
 
+load_dotenv()
 
-ACCESS_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6ImFlNDFjZWI0ZjZhY2QzNjZhZjJjNjcwZjgyMGZlOWE3OTRlYTNiYzYzNzZjY2RjZDJhM2Y5NjI1MThkNTE5MGZlNWFlMjkwOTAxZDA0ZWNjIn0.eyJhdWQiOiIxYTMwYTA4ZS04MzhjLTRiYWItYTczYy0wMTkyNTIxOTI3YWEiLCJqdGkiOiJhZTQxY2ViNGY2YWNkMzY2YWYyYzY3MGY4MjBmZTlhNzk0ZWEzYmM2Mzc2Y2NkY2QyYTNmOTYyNTE4ZDUxOTBmZTVhZTI5MDkwMWQwNGVjYyIsImlhdCI6MTc3MTYwNzMwNywibmJmIjoxNzcxNjA3MzA3LCJleHAiOjE3NzE2OTM3MDcsInN1YiI6IjEzNDg2MDY2IiwiZ3JhbnRfdHlwZSI6IiIsImFjY291bnRfaWQiOjMyODk0NDkwLCJiYXNlX2RvbWFpbiI6ImFtb2NybS5ydSIsInZlcnNpb24iOjIsInNjb3BlcyI6WyJwdXNoX25vdGlmaWNhdGlvbnMiLCJmaWxlcyIsImNybSIsImZpbGVzX2RlbGV0ZSIsIm5vdGlmaWNhdGlvbnMiXSwiaGFzaF91dWlkIjoiNTBiNjc5YjQtYWVmOS00ZTJlLThiNjAtY2Q2NTQ4ZjZlNTg3IiwiYXBpX2RvbWFpbiI6ImFwaS1iLmFtb2NybS5ydSJ9.QRRDsp2wbzfBI2A5WryN05oJFFqJwPBWX2Rnh3Wp6Cl_D13KEZtQRJzbzSuwcsNOde-evzQ7Q2uJ-DZKlPGW522ptGV11qKCd1Mjq_hRBnlP3eD9BnaM0_MTkfgyv00J6HYxb8dyCNpbnYv13c8qDt1XQJ3bCajQcqn9eBJ6h4WdGS2S9OPj-m7IdngMPZq4K4b2WnkGU-QrmM0Yjd2Rit7fgg-tGS049RZZW8tq-2j5QnnfhPKWqQCGe1TzuxFO9-2pf4169TNnzxVsuhRiPOwvLkrDMYC7pPPXeZMq_jkqZSkDPFJ9HF5j5sC_fAYzBRRYF0hTvoignLeUbO3RqA'
+CLIENT_ID = os.getenv('AMOCRM_CLIENT_ID')
+CLIENT_SECRET = os.getenv('AMOCRM_CLIENT_SECRET')
+SUBDOMAIN = os.getenv('AMOCRM_SUBDOMAIN')
+REDIRECT_URL = os.getenv('AMOCRM_REDIRECT_URL')
+
 
 class AmoCRMClient:
-    def __init__(self, subdomain: str, token: str = ACCESS_TOKEN):
+    def __init__(self, subdomain: str):
         self.subdomain = subdomain
         self.base_url = f'https://{subdomain}.amocrm.ru/api/v4'
-        self.token = token
+        self.token_key = 'amocrm_auth_data'
+        self.access_token = None
         self.client = httpx.AsyncClient()
 
     async def __aenter__(self):
+        await self._load_token()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.client.aclose()
+    
+
+    async def _load_token(self):
+        data = await redis_client.get(self.token_key)
+        if data:
+            token_dict = json.loads(data)
+            self.access_token = token_dict.get('access_token')
+        else:
+            logger.error('Токен отсутствует в Redis. Нужно провести пероаичную авторизацию')
+    
+    async def _refresh_token(self):
+        data = await redis_client.get(self.token_key)
+        if not data:
+            return False
+
+        token_data = json.loads(data)
+        refresh_token = token_data.get('refresh_token')
+
+        url = f'https://{self.subdomain}.amocrm.ru/oauth2/access_token'
+        params = {
+            'client_id': CLIENT_ID,
+            'client_secret': CLIENT_SECRET,
+            'grant_type': 'refresh_token',
+            'redirect_uri': REDIRECT_URL,
+            'refresh_token': refresh_token,
+        }
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, json=params)
+            if response.status_code == 200:
+                data = response.json()
+                await redis_client.set(self.token_key, json.dumps(data))
+                self.access_token = data.get('access_token')
+                logger.info('Токен обновлён в Redis')
+                return True
+
+            logger.error(f'Ошибка обновления токена: {response.status_code} | {response.text}')
+            return False
+
+    async def _request(self, method, endpoint, **kwargs):
+        if not self.access_token:
+            await self._load_token()
+
+        url = f'{self.base_url}/{endpoint.lstrip('/')}'
+
+        headers = kwargs.pop('headers', {})
+        headers['Authorization'] = f'Bearer {self.access_token}'
+        if 'json' in kwargs:
+            headers['Content-Type'] = 'application/json'
+
+        response = await self.client.request(method, url, headers=headers, **kwargs)
+
+        if response.status_code == 401:
+            logger.warning('Token expired')
+            if await self._refresh_token():
+                headers['Authorization'] = f'Bearer {self.access_token}'
+                response = await self.client.request(method, url, headers=headers, **kwargs)
+        
+        return response
 
 
     def _headers(self, json_type: bool = False):
@@ -26,14 +96,13 @@ class AmoCRMClient:
         return headers
     
     async def get_contacts(self, query: str):
-        url = f'{self.base_url}/contacts'
         params = {
             'query': query,
             'with': 'leads'
         }
 
         try:
-            response = await self.client.get(url, headers=self._headers(), params=params)
+            response = await self._request('GET', 'contacts', params=params)
 
             if response.status_code == 200:
                 return response.json().get('_embedded', {}).get('contacts', [])
@@ -51,23 +120,19 @@ class AmoCRMClient:
 
     # Поиск контакта по его айди
     async def find_contact_by_id(self, contact_id: str):
-        url = f'{self.base_url}/contacts/{contact_id}'
         params = {'with': 'leads'}
-        response = await self.client.get(url, headers=self._headers(), params=params)
+        response = await self._request('GET', f'contacts/{contact_id}', params=params)
         if response.status_code == 200:
             return [response.json()]
         return []
     
     async def find_contact_by_tg_nick(self, tg_nick: str):
-        url = f'{self.base_url}/contacts'
-        headers = self._headers()
-
         params = {
             'limit': 250,
             'with': 'leads'
         }
 
-        response = await self.client.get(url, headers=headers, params=params)
+        response = await self._request('GET', 'contacts', params=params)
 
         if response.status_code != 200:
             logger.error(f'Ошибка не р: {response.status_code} - {response.text}')
@@ -93,8 +158,6 @@ class AmoCRMClient:
             'custom_fields_values': [
             ]
         }
-        url = f'{self.base_url}/contacts/{contact_id}'
-        headers = self._headers(True)
 
         contact = await self.find_contact_by_id(contact_id)
 
@@ -103,7 +166,7 @@ class AmoCRMClient:
             i.get('values')[0]['value'] = ''
             payload.get('custom_fields_values').append(i)
 
-        response = await self.client.patch(url, headers=headers, json=payload)
+        response = await self._request('PATCH', f'contacts/{contact_id}', json=payload)
 
         if response.status_code == 200:
             return 'Дубль обработан'
@@ -116,8 +179,6 @@ class AmoCRMClient:
             'custom_fields_values': [
             ]
         }
-        url = f'{self.base_url}/contacts/{original_id}'
-        headers = self._headers(True)
         
         original_contact = await self.find_contact_by_id(str(original_id))
         duplicate_contact = await self.find_contact_by_id(str(duplicate_id))
@@ -148,7 +209,8 @@ class AmoCRMClient:
                 if i.get('field_code') in missing_field_names:
                     payload.get('custom_fields_values').append(i)
 
-        response = await self.client.patch(url, headers=headers, json=payload)
+        response = await self._request('PATCH', f'contacts/{original_id}', json=payload)
+
         if response.status_code == 200:
             await self.delete_contact(str(duplicate_id))
             return response.json(), response.text
@@ -159,10 +221,7 @@ class AmoCRMClient:
     async def link_lead_to_contact(self, lead_id: int, contact_id: int):
         if lead_id == 0:
             return False
-        
-        url = f'{self.base_url}/leads/{lead_id}/link' 
-        headers = self._headers(True)
-        
+
         payload = [
             {
                 'to_entity_id': int(contact_id),
@@ -173,7 +232,7 @@ class AmoCRMClient:
             }
         ]
 
-        response = await self.client.post(url, headers=headers, json=payload)
+        response = await self._request('POST', f'leads/{lead_id}/link', json=payload)
         
         # Логируем ответ, чтобы увидеть ошибку от amo, если она есть
         if response.status_code not in (200, 201, 204):
@@ -184,9 +243,8 @@ class AmoCRMClient:
     
     # Получаем все примечания/заметки контакта. Нужно: айди контакта
     async def get_contact_notes(self, contact_id: int):
-        url = f'{self.base_url}/contacts/{contact_id}/notes'
-        headers = self._headers(True)
-        response = await self.client.get(url, headers=headers)
+        response = await self._request('GET', f'contacts/{contact_id}/notes')
+
         if response.status_code == 200:
             return response.json().get('_embedded', {}).get('notes', [])
         return []
@@ -197,9 +255,7 @@ class AmoCRMClient:
     async def transfer_notes(self, notes_list, original_contact_id):
         if not notes_list:
             return False
-        
-        url = f'{self.base_url}/contacts/{original_contact_id}/notes'
-        headers = self._headers(True)
+
         
         payload = [
             {
@@ -212,7 +268,7 @@ class AmoCRMClient:
         ]
 
         if payload:
-            await self.client.post(url, headers=headers, json=payload)
+            await self._request('POST', f'contacts/{original_contact_id}/notes', json=payload)
             return True
         return False
 
