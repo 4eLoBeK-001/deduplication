@@ -7,11 +7,11 @@ load_dotenv()
 
 
 REDIS_HOST = os.getenv('REDIS_HOST', 'redis')
-REDIS_PORT = os.getenv('REDIS_PORT', 6379)
+REDIS_PORT = os.getenv('REDIS_PORT', '6379')
 
 
 redis_client = redis.from_url(
-    f'redis://{REDIS_HOST}:{REDIS_PORT}', 
+    f'redis://{REDIS_HOST}:{REDIS_PORT}/0', 
     decode_responses=True
 )
 
