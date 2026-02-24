@@ -29,22 +29,25 @@ async def extract_phone_final(data: dict):
 
 
 async def extract_tg_nick_final(data: dict):
-    TG_FIELD_ID = "2400145"
-    tg_index = None
+    prefix = None
+    field_id = None
 
     for key, value in data.items():
-        if '[id]' in key and value == TG_FIELD_ID:
-            tg_index = key.split('[id]')[0]
-            break
+        if '[name]' in key:
+            val_str = str(value).lower()
+            if "tg" in val_str or "telegram" in val_str or "телеграм" in val_str:
+                prefix = key.replace('[name]', '')
+                
+                field_id = data.get(f"{prefix}[id]")
+                break
 
-    if not tg_index:
-        return None
+    if not prefix:
+        return None, None
 
-    for key, value in data.items():
-        if tg_index in key and '[value]' in key:
-            return value
+    value_key = f"{prefix}[values][0][value]"
+    tg_nick = data.get(value_key)
 
-    return None
+    return tg_nick, field_id
 
 
 # Передаём список контактов. 

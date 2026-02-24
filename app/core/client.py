@@ -147,7 +147,7 @@ class AmoCRMClient:
             return [response.json()]
         return []
     
-    async def find_contact_by_tg_nick(self, tg_nick: str):
+    async def find_contact_by_tg_nick(self, tg_nick: str, tg_field_id: str | int | None = None):
         params = {
             'limit': 250,
             'with': 'leads'
@@ -164,12 +164,14 @@ class AmoCRMClient:
         filtered = []
 
         for contact in contacts:
-            fields = contact.get('custom_fields_values') or []
-            for field in fields:
-                if field.get('field_id') == 2400145:
-                    for value in field.get('values', []):
-                        if value.get('value') == tg_nick:
-                            filtered.append(contact)
+                fields = contact.get('custom_fields_values') or []
+                for field in fields:
+                    current_field_id = field.get('field_id')
+                    if str(current_field_id) == str(tg_field_id):
+                        for value in field.get('values', []):
+                            if value.get('value') == tg_nick:
+                                filtered.append(contact)
+                                
         return filtered
 
     # Стираются все custom_fields

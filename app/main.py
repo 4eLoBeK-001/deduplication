@@ -35,7 +35,7 @@ async def test(request: Request):
     return {'status': 'ok'}
 
 
-async def process_contact_merge(original_phone: str | None, tg_nick: str | None, data: dict, request_id: str):
+async def process_contact_merge(original_phone: str | None, tg_nick: str | None, tg_field_id: str | None, data: dict, request_id: str):
     with logger.contextualize(request_id=request_id):
         start_time = asyncio.get_event_loop().time()
 
@@ -89,7 +89,7 @@ async def process_contact_merge(original_phone: str | None, tg_nick: str | None,
                     # Если не нашлось по телефону то искать по нику
                     if not found_contacts and tg_nick:
                         await asyncio.sleep(2)
-                        found_contacts = await amo.find_contact_by_tg_nick(tg_nick)
+                        found_contacts = await amo.find_contact_by_tg_nick(tg_nick, tg_field_id)
 
                     if not found_contacts:
                         logger.info('Contact not found')
@@ -173,23 +173,25 @@ async def test_request(request: Request, background_task: BackgroundTasks):
         logger.info('Webhook received')
         form_data = await request.form()
         data = dict(form_data)
+        logger.info(data)
 
         original_phone = None
         tg_nick = None
+        tg_field_id = None
 
         original_phone = await extract_phone_final(data)
 
         if not original_phone:
             logger.warning('Phone not found in webhook')
             
-            tg_nick = await extract_tg_nick_final(data)
+            tg_nick, tg_field_id = await extract_tg_nick_final(data)
             if not tg_nick:
                 logger.warning('tg nick not found in webhook')
                 return {'status': '404', 'text': 'tg nick and phone not found'}
         
         logger.info(f'Phone extracted: {original_phone}') if original_phone else None
         
-        background_task.add_task(process_contact_merge, original_phone, tg_nick, data, request_id)
+        background_task.add_task(process_contact_merge, original_phone, tg_nick, tg_field_id, data, request_id)
 
         return {'status': 'ok'}
 
